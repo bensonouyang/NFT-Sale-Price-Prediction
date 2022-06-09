@@ -1,0 +1,101 @@
+---
+title: "project2"
+author: "Lu Tan"
+date: "10/11/2021"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+rm(list = ls())
+library(readxl)
+library(stringr)
+library(readr)
+library(tidyr)
+library(ggplot2)
+library(dplyr)
+```
+
+```{r,include=FALSE}
+XYtr = read.csv("data/XYtr.csv")
+Xte = as.data.frame(read_csv( "data/Xte.csv"))
+```
+
+```{r}
+Xtr = XYtr[,c(2,3,8,9,10)]
+Xtr$cdate = as.numeric(as.POSIXct(x = Xtr$cdate,tz = "UTC"))/(60*60*24)
+Xtr[is.na(Xtr)] = 0
+```
+
+```{r}
+pairs(Xtr)
+```
+
+
+```{R}
+boxplot(total~fee1,data = Xtr)
+```
+
+```{r}
+range = range(Xtr$total) #0  1195
+interval.length = ceiling(max(range/10)) # int: 120
+
+Xtr$label = 0
+j=0
+for (i in 1:nrow(Xtr)) {
+  if (i<=120) {
+    Xtr[i,6] = 1
+  }
+   else if (i<=240) {
+    Xtr[i,6] = 2
+   }
+   else if (i<=360) {
+    Xtr[i,6] = 3
+   }
+   else if (i<=480) {
+    Xtr[i,6] = 4
+   }
+   else if (i<=600) {
+    Xtr[i,6] = 5
+   }
+   else if (i<=720) {
+    Xtr[i,6] = 6
+   }
+   else if (i<=840) {
+    Xtr[i,6] = 7
+   }
+   else if (i<=960) {
+    Xtr[i,6] = 8
+   }
+   else if (i<=1080) {
+    Xtr[i,6] = 9
+   }
+   else {
+    Xtr[i,6] = 10
+  }
+}
+
+Xtr$label = as.factor(Xtr$label)
+```
+
+```{r}
+fee1.label = cut(Xtr$fee1, breaks = c(0, 250, 500, 750,1000,1300),
+                  labels = c("1","2","3","4","5"))
+Xtr$fee1.label = fee1.label
+fee2.label = cut(Xtr$fee2, breaks = c(0, 250, 500, 750,1000,1300),
+                  labels = c("1","2","3","4","5"))
+Xtr$fee2.label = fee2.label
+```
+
+```{r}
+pairs(Xtr,   panel = function(x, y) {
+    panel.smooth(x, y)
+    abline(lsfit(x, y), lty = 2)
+  })
+```
+
+```{r}
+boxplot(total~fee1.label,data=Xtr)
+
+```

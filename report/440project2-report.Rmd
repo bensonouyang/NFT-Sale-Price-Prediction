@@ -1,0 +1,358 @@
+---
+title: "**NFT Auctions by Kaggle Team lululu233**"
+author: 
+- Lu Tan (301270445)
+- Benson Ou-yang (301277342)
+date: November 8, 2021
+abstract:
+  
+
+output: 
+  bookdown::pdf_document2:
+    extra_dependencies: "subfig"
+    fig_caption: yes
+    includes: 
+      in_header: my_header.tex
+---
+
+\newpage
+
+# Introduction
+
+Non-fungible tokens (NFTs) are unique digital items that are bought and sold via cryptocurrency. The hype behind these NFTs is the insanely high amounts of Ethereum spent for them. Many celebrities and big brands have launched their own NFTs that many people are hoping to collect. The big question is what makes certain NFTs worth more than others. For our analysis, we gathered the NFT auction data and did some data cleaning. We also did some image and text processing for more features. Afterwards, we fit a linear model with stochastic gradient descent with different explanatory variables. By trying to improve the \emph{Mean Absolute Error}, we compared some models with default parameters and ran a fivefold \emph{Cross Validation} process. To further improve our analysis, we tried implementing a \emph{Deep Neural Network} and a \emph{Convolutional Neural Network}.  With the \emph{Keras} package, we were able to combine a \emph{Multilayer Perceptron Model} with a \emph{Convolutional Neural Network} to produce NFT auction price predictions. 
+
+# Data Description
+
+```{r vars-tab1, echo = FALSE}
+# format tables side by side
+# https://stackoverflow.com/questions/38036680/align-multiple-tables-side-by-side
+
+ff = data.frame(Vars = c("id","X.sales","cdate","description","fee1","fee2","total"),total = c("The NFT ID","The number of times the NFT has been auctioned previously", "The date when the NFT was created", "A modified text description where each word is an unique string", "Transaction fee associated with the auction","Transaction fee associated with the auction", "Closing auction price"))
+"Vars" = c("id","X.sales","cdate","description","fee1","fee2","total")
+knitr::kable(ff, 
+format = "markdown", caption = "Description of the features", col.names = c("Variable Name","Description"))
+```
+
+```{r, echo=FALSE}
+XYtr = read.csv("data/XYtr.csv")
+Xtr = XYtr[,c(2,3,8,9,10)]
+Xtr$cdate = as.numeric(as.POSIXct(x = Xtr$cdate,tz = "UTC"))/(60*60*24)
+Xtr[is.na(Xtr)] = 0
+
+```
+
+```{r figpairs, echo = FALSE, fig.align = "center",out.height = "40%",fig.cap="Pairs Plots of Explanatory Variables and Response Variable"}
+pairs(Xtr, panel = function(x, y) {
+    panel.smooth(x, y)
+    abline(lsfit(x, y), lty = 2)
+  })
+```
+
+
+From Figure \@ref(fig:figpairs), fee1 and fee2 could be potential categorical variables. X.sales have points in an L shape where many NFT auctions only have one sale, and a few NFTs have multiple. 
+
+# Methods
+
+## Data Pre-processing
+
+We first start with cleaning the data by filling all NAN values with 0. Next, we standardize the features to make the data consistent.
+
+## Feature Engineering
+
+### Image Processing
+
+From the package \emph{imageio}, we extracted features from the images that are in the training set. We denoted each column as fi1 to fi7. The columns represented the width, height, brightness, darkness, and the mean intensity of red, green and blue.  
+
+### Text Processing
+
+#### Text Feature Extraction \
+\
+We first converted the text to a matrix of token count with \emph{CountVectorizer} from the package \emph{scikit-learn}. Next, we removed the top ten percent of the most frequent words to avoid common stop words. Afterwards, we transform the matrix into a corpus for further analysis.
+
+#### Text Modelling \
+\
+\emph{Latent Dirichlet Allocation}(LDA) is a three-level Bayesian model, with each item is modelled as a mixture of topics. It classifies text data based on some assumptions, such as independent topics and exchangeable words.
+
+\emph{Non-negative Matrix Factorization}(NMF) is an effective method of clustering high-dimensional data. It reduces the dimension by separating the term-by-document matrix into two-dimensional factor matrices. Each vector in the original matrix is a bag-of-words representation for every document.
+
+\emph{Truncated Singular Value Decomposition}(Truncated SVD) is a process that linearly reduces the number of input variables known as dimensionality reduction. By reducing the dimensionality, this method can preserve the meaningful features observed in the data. 
+
+\emph{Kernel Principal Component Analysis}{KPCA} is a nonlinear method that reduces dimensions through the use of kernels. It helps with decision boundaries of data that are nonlinear.
+
+
+## Machine Learning
+
+The first model we attempted was fitting a linear regression model by minimizing a regularized empirical loss with \emph{Stochastic Gradient Descent}. In the package \emph{scikit-learn}, we used the function \emph{SGDRegressor}. The hyperparameters we chose were epsilon insensitive for the loss function, zero for both the alpha and epsilon. With the loss function as epsilon insensitive, the model ignores errors less than epsilon. Alpha is the constant that multiplies the regularization term.
+
+We also tried fitting many regressor models from \emph{scikit-learn} such as \emph{Lasso, ElasticNet, KernelRidge, GradientBoostingRegressor, XGBRegressor, and LGBMRegressor}. By using a five-fold \emph{Cross Validation} process and splitting the training data into a train and test set, we were able to compare these models by calculating the \emph{Mean Absolute Error}(MAE). By averaging the MAE, we discovered that the \emph{Gradient Boosting Regressor} performed the best. We then fine-tuned the hyperparameters by using \emph{GridSearchCV}. 
+
+## Deep Learning
+
+By extracting the grayscale image data into an array, we fit a \emph{Deep Neural Network} and a \emph{Convolutional Neural Network} from the package \emph{Keras}. With the NFT auction data, we fit a \emph{Multilayer Perceptron} model. To further improve our analysis, we concatenated the \emph{Convolutional Neural Network}(CNN) with a \emph{Multilayer Perceptron}(MLP). The MLP took the numerical data as input while the CNN took the image arrays as inputs, and the output was the NFT auction price predictions.
+
+# Results
+
+The text processing methods with the \emph{SGD Regressor} that improved the MAE were NMF and Truncated-SVD. \emph{SGDRegressor} was the best performing model with the explanatory variables X.sales, cdate, fee1,fee2 and the text processing features. The \emph{Gradient Boosting Regressor} improved quite a bit after tuning the hyperparameters but did not beat the linear model. Our best model was the combination of the \emph{Convolutional Neural Network}(CNN) and the \emph{Multilayer Perceptron}(MLP). 
+
+# Conclusion
+
+In our analysis, we discovered the importance of feature selection as that affects the strength of the models. A way to further minimize the \emph{Mean Absolute Error} is to have better feature engineering. Although we did some feature engineering, our scores did not improve drastically. Furthermore, if we researched a little more about the \emph{Neural Networks} and the \emph{Deep Learning} model process and parameter tuning, it could potentially increase the ability to predict.  In conclusion, using the combination of \emph{CNN} and \emph{MLP} model was the most successful at predicting NFT auction prices. 
+
+# References
+
+
+[Géron, Hands-On Machine Learning with Scikit-Learn, Keras, and Tensorflow, 2019](https://www.oreilly.com/library/view/hands-on-machine-learning/9781492032632/)
+
+[Pedregosa et al., Scikit-learn: Machine Learning in Python, 2011](https://scikit-learn.org/dev/user_guide.html)
+
+[Abadi et al., TensorFlow: Large-scale machine learning on heterogeneous systems, 2015](https://www.tensorflow.org/tutorials)
+
+[Chollet et al., Keras, 2015](https://keras.io/api/)
+
+[Tolios, Simplifying Image Outlier Detection with Alibi Detect, 2020](https://towardsdatascience.com/simplifing-image-outlier-detection-with-alibi-detect-6aea686bf7ba)
+
+\newpage
+
+# Challenge Question
+
+## Summary Statistics of NFT Auction Prices
+
+```{r vars-tab, echo = FALSE}
+# format tables side by side
+# https://stackoverflow.com/questions/38036680/align-multiple-tables-side-by-side
+
+ff = data.frame(total = c(6914,9.66,73.85,0,0.029,0.12,0.45,1195))
+row.names(ff) = c("count","mean","std","min","25%","50%","75%","max")
+knitr::kable(ff, 
+format = "markdown", caption = "Summary Statistics", col.names = c("Total"))
+```
+
+
+## Visualizations
+
+\begin{figure}[c]
+  \includegraphics{output_5_0.png}
+  \caption{Comparison between ETH and NFT prices over time}
+  \label{fig:nftethcomp}
+\end{figure}
+
+From Figure \@ref(fig:nftethcomp), there seem to be a lot of data points at the bottom that is worth investigating. From the summary statistics table, the mean is 9.66, and the median is 0.12. Many outliers are driving the mean NFT price up, so removing the outliers or just studying the data points around the median may be beneficial. 
+
+## Linear Regression
+
+
+\begin{figure}[c]
+  \includegraphics[width = 8cm]{output_11_0.png} \includegraphics[width = 8cm]{output_12_0.png}
+  \caption{Median \& 3rd Quartile NFT Auction Prices and Normalized ETH prices with Regression Line}
+  \label{fig:lrmed}
+\end{figure}
+
+\begin{figure}[c]
+  \includegraphics[width = 8cm]{output_13_1.png} \includegraphics[width = 8cm]{output_14_1.png}
+  \caption{Mean \& All NFT Auction Prices and Normalized ETH prices with Regression Line}
+  \label{fig:lrmean}
+\end{figure}
+
+From the above plots (Figures \@ref(fig:lrmed), \@ref(fig:lrmean)), we ran a linear regression model to see the correlation between Ethereum price and the NFT sale price. We normalized the Ethereum price to make the plots easier to interpret. There seems to be a slightly positive correlation between Ethereums price and the NFT sale price when comparing only the NFT prices that are less than the median. We also made models based on all NFT sale prices, prices less than the third quartile and the mean. There is a positive effect between Ethereum prices and NFT auction prices less than the median sale prices. As we include more data, the correlation starts to decrease.   
+
+\newpage
+
+# Bonus Question
+
+## Alibi Detect
+
+```{r, echo = FALSE}
+library(reticulate)
+```
+
+
+```{python, eval = FALSE}
+# inspired by
+# https://towardsdatascience.com/simplifing-image-outlier-detection-with-alibi-detect-6aea686bf7ba
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from PIL import Image
+import glob
+import os
+import shutil
+from collections import Counter
+import tensorflow as tf
+from tensorflow.keras.layers import Conv2D, Conv2DTranspose, UpSampling2D,\
+    Dense, Layer, Reshape, InputLayer, Flatten, Input, MaxPooling2D
+from alibi_detect.od import OutlierAE
+from alibi_detect.utils.visualize import plot_instance_score, plot_feature_outlier_image
+
+def img_to_np(te1, resize = True):  
+    img_array = []
+    for ii in range(te1.shape[0]):
+        if ii % 100 == 0:
+            print('%d / %d' % (ii, te1.shape[0]))
+        if te1['ext'][ii] == '.png':
+            id = te1.loc[ii,'id']
+            ff = te1.loc[ii, 'id'] + te1.loc[ii, 'ext']
+            path = 'data/images/images/' + ff
+            if not os.path.isfile(path):
+                continue
+        
+            img = Image.open(path).convert("RGB")
+            if(resize): 
+                img = img.resize((64,64))
+            img_array.append(np.asarray(img))
+    images = np.array(img_array)
+    return images
+        
+
+
+
+#path_train = "data/images/images"
+#path_test = "data/images/images"
+
+train = img_to_np(te1 = tr1)
+test = img_to_np(te1 = te1)
+train = train.astype('float32') / 255.
+test = test.astype('float32') / 255.
+```
+
+
+This code chunk imports all required libraries. The function \emph{img\_to\_np} takes a file path to an image and converts it into a NumPy array. We used the functions twice to make the training and testing data for the model. 
+
+
+```{python, eval = FALSE}
+encoding_dim = 1024
+dense_dim = [8, 8, 128]
+
+encoder_net = tf.keras.Sequential(
+  [
+      tf.keras.layers.InputLayer(input_shape=train[0].shape),
+      tf.keras.layers.Conv2D(64, 4, strides=2, padding='same', activation=tf.nn.relu),
+      tf.keras.layers.Conv2D(128, 4, strides=2, padding='same', activation=tf.nn.relu),
+      tf.keras.layers.Conv2D(512, 4, strides=2, padding='same', activation=tf.nn.relu),
+      tf.keras.layers.Flatten(),
+      tf.keras.layers.Dense(encoding_dim,)
+  ])
+
+decoder_net = tf.keras.Sequential(
+  [
+      tf.keras.layers.InputLayer(input_shape=(encoding_dim,)),
+      tf.keras.layers.Dense(np.prod(dense_dim)),
+      tf.keras.layers.Reshape(target_shape=dense_dim),
+      tf.keras.layers.Conv2DTranspose(256, 4, strides=2, padding='same', activation=tf.nn.relu),
+      tf.keras.layers.Conv2DTranspose(64, 4, strides=2, padding='same', activation=tf.nn.relu),
+      tf.keras.layers.Conv2DTranspose(3, 4, strides=2, padding='same', activation='sigmoid')
+  ])
+
+od = OutlierAE( threshold = 0.001,
+                encoder_net=encoder_net,
+                decoder_net=decoder_net)
+
+adam = tf.keras.optimizers.Adam(lr=1e-4)
+
+od.fit(train, epochs=100, verbose=True,
+       optimizer = adam)
+
+od.infer_threshold(test, threshold_perc=95)
+
+preds = od.predict(test, outlier_type='instance',
+            return_instance_score=True,
+            return_feature_score=True)
+```
+
+This chunk contains the code for the encoder and decoder part of the \emph{Convolutional Autoencoder}. The \emph{Convolutional Autoencoder} is a form of \emph{Convolutional Neural Networks}. They reconstruct images while minimizing errors by learning optimal filters. After this training process, they apply to any inputs for feature extraction. 
+
+This model calculates a threshold value where any outputs instance score above this value is an outlier. 
+
+## Outputs
+
+```{python, eval = FALSE}
+k=0
+a = np.zeros(len(preds['data']['is_outlier']))
+for ii in range(len(preds['data']['is_outlier'])):
+    if te1['ext'][ii] == '.png':
+        id = te1.loc[ii,'id']
+        ff = te1.loc[ii, 'id'] + te1.loc[ii, 'ext']
+        path = 'data/images/images/' + ff
+        if(preds['data']['is_outlier'][ii] == 1):
+            source = path
+            a[k] = ii
+        k = k+1
+
+
+dict1 = {'Filename': te1['id'][a],
+     'instance_score': preds['data']['instance_score'],
+     'is_outlier': preds['data']['is_outlier']}
+     
+df = pd.DataFrame(dict1)
+df_outliers = df[df['is_outlier'] == 1]
+
+print(df_outliers)
+```
+
+\begin{figure}[c]
+  \centering
+  \includegraphics{df_outlier_output.png}
+  \caption{DataFrame containing information about the outliers}
+  \label{fig:outlierout}
+\end{figure}
+
+Figure \@ref(fig:outlierout) shows the DataFrame containing the outliers information from the model prediction. It includes the filename(id), instance score and if it is an outlier. 
+
+```{python, eval = FALSE}
+print(df_outliers['Filename'].unique())
+```
+
+\begin{figure}[c]
+  \centering
+  \includegraphics{df_outlier_unique_filenames.png}
+  \caption{Unique NFT id that are outliers }
+  \label{fig:outlierunique}
+\end{figure}
+
+
+Figure \@ref(fig:outlierunique) outputs the unique ids that are outliers. 
+
+```{python, eval = FALSE}
+print(df_outliers.sort_values(by = ['instance_score']))
+```
+
+\begin{figure}[c]
+  \centering
+  \includegraphics{df_outlier_sorted.png}
+  \caption{Sorted instance scores of outliers}
+  \label{fig:outliersorted}
+\end{figure}
+
+Figure \@ref(fig:outliersorted) is the sorted DataFrame of the outlier predictions. The top and bottom five rows are the ids of the same image. 
+
+
+```{python, eval = FALSE}
+print(df_outliers.explode('Filename')['Filename'].value_counts())
+```
+
+\begin{figure}[c]
+  \centering
+  \includegraphics{df_outlier_frequency.png}
+  \caption{Frequency of NFT outliers detected}
+  \label{fig:outlierfreq}
+\end{figure}
+
+Figure \@ref(fig:outlierfreq) shows that only one image got detected multiple times. 
+
+```{python, eval = FALSE}
+outimg = 'data/images/images/7e79f1a9cb10504dd2fc569d84f2a346.png'
+import matplotlib.pyplot as plt
+import matplotlib.image as mpimg
+img = mpimg.imread(outimg)
+imgplot = plt.imshow(img)
+plt.show()
+```
+
+\begin{figure}[c]
+  \centering
+  \includegraphics{outlierpic.png}
+  \caption{Outlier image out of the NFT thumbnails}
+  \label{fig:outlierpic}
+\end{figure}
+
+Figure \@ref(fig:outlierpic) is the image detected as an outlier many times. Although the picture is scaled down, the shape and colours potentially indicate a child's drawing to the human eye. This image id is 7e79f1a9cb10504dd2fc569d84f2a346.
