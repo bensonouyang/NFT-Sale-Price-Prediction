@@ -4,7 +4,7 @@
 * [Introduction](#introduction)
 * [Technologies](#technologies)
 * [Libraries](#libraries)
-* [Usage](#usage)
+* [Files](#files)
 * [Source](#source)
 
 ## Introduction
